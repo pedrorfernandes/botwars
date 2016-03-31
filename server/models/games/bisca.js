@@ -58,8 +58,8 @@ let teamsPerNumberOfPlayers = {
 };
 
 let cardNumbersPerPlayerNumbers = {
-  2: 3,
-  4: 3
+  2: 9,
+  4: 6
 };
 
 function getNumberOfCardsPerPlayer(numberOfPlayers) {
@@ -124,7 +124,7 @@ class Bisca extends Game {
   _getTeams() {
     return teamsPerNumberOfPlayers[this.numberOfPlayers];
   }
-  
+
   static _playerIndexToPlayer(player) {
     return player + 1;
   }
@@ -170,7 +170,6 @@ class Bisca extends Game {
     let playerIndex = player - 1;
 
     this._putCardInTrick(playerIndex, card);
-
     this._updatePlayerHasSuits(playerIndex, card);
 
     var cardsInTableCount = this._getCardsInTableCount();
@@ -231,15 +230,14 @@ class Bisca extends Game {
       'numberOfPlayers', 'nextPlayer', 'deck', 'hands', 'trumpCard',
       'trumpPlayer', 'trump', 'trick', 'lastTrick', 'wonCards', 'round',
       'suitToFollow', 'hasSuits', 'error', 'winners', 'score'
-      // tricksDone
     ]);
   }
 
   getStateView(fullState, player) {
     return {
       ...fullState,
-      // deck: fullState.deck.map(card => null),
-      // hands: fullState.hands.map(hand => hand.map(card => null)),
+      deck: fullState.deck.map(card => null),
+      hands: fullState.hands.map(hand => hand.map(card => null)),
       hand: fullState.hands[player - 1]
     };
   }
@@ -267,9 +265,7 @@ class Bisca extends Game {
   };
 
   getHighestCard(table, suitToFollow) {
-    let trump = this.trump;
-
-    let trumps = table.filter(card => getSuit(card) === trump);
+    let trumps = table.filter(card => getSuit(card) === this.trump);
 
     if (trumps.length > 0) {
       return max(trumps, getScaledValue);
@@ -289,16 +285,14 @@ class Bisca extends Game {
     if (this.suitToFollow 
       && this.suitToFollow !== playedSuit 
       && this._isMandatoryToFollowSuit()) {
+
       this.hasSuits[player][this.suitToFollow] = false;
     }
   }
 
   getScore(players) {
-    let self = this;
-
-    let teamWonCards = players.reduce(function getCards(cards, player) {
-      return cards.concat(self.wonCards[player]);
-    }, []);
+    let teamWonCards = players.reduce(
+      (cards, player) => cards.concat(this.wonCards[player]), []);
 
     return sum(teamWonCards, card => getValue(card));
   }

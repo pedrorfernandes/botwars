@@ -187,19 +187,21 @@ const LastTrick = ({ cards, x = 10, y = 85, delta = 5, rot }) => {
   );
 };
 
-const Scoreboard = ({ score }) => (
+const Scoreboard = ({ score, deck = [] }) => (
   <div className="scoreboard">
     <span>Score</span>
     <br />
     <span><span className="player-chip inline team1" />Team 1: {score ? score[0] : "-"}</span>
     <br />
     <span><span className="player-chip inline team2" />Team 2: {score ? score[1] : "-"}</span>
+    <br />
+    <span>Deck size: {deck.length}</span>
   </div>
 );
 
 const Bisca = ({ player, gameState, isLastState, onMove }) => {
   let { nextPlayer, hand, hands, trick, lastTrick, trumpCard,
-    trumpPlayer, score } = gameState || {};
+    trumpPlayer, score, deck } = gameState || {};
   
   console.log(gameState);
 
@@ -217,7 +219,7 @@ const Bisca = ({ player, gameState, isLastState, onMove }) => {
                    onCardClick={onCardClick} />
             <Trump card={trumpCard} player={trumpPlayer} />
             <LastTrick cards={lastTrick} rot={rot} />
-            <Scoreboard score={score} />
+            <Scoreboard score={score} deck={deck} />
           </div>
         </div>
       </Col>
