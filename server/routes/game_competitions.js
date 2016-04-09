@@ -3,9 +3,6 @@ import express from "express";
 export default function (gameRegistry, compRegistry) {
   let router = new express.Router();
 
-  // TODO competition only for debugging purposes
-  compRegistry.create({ name: "Test match 2", type: "match", gameCount: 1 }, "0");
-
   router.param("compId", function (req, res, next, compId) {
     let comp = compRegistry.get(compId);
     if (!comp) { res.status(404).send("The requested competition does not exist"); return; }

@@ -29,6 +29,14 @@
       "clientComponent": "./components/competitions/Match"
     }
   },
+  
+  "populate": {
+    "games": [],
+    "competitions": [
+      { "gameName": "Bisca", "name": "Bisca Competition", "type": "match", "gameCount": 10, "playerCount": 2 },
+      { "gameName": "Sueca", "name": "Sueca Competition", "type": "match", "gameCount": 10, "playerCount": 4 }
+    ]
+  },
 
   "couchbase": {
     "enabled": false,

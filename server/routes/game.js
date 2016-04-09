@@ -7,6 +7,9 @@ import CompetitionRegistry from "../models/competition_registry";
 import competitionsRoutes from "./game_competitions";
 import gamesRoutes from "./game_games";
 
+import fs from "fs";
+const populateConfig = JSON.parse(fs.readFileSync("config.json")).populate;
+
 export default function (Game, compTypes) {
   let gameRegistry = new GameRegistry(Game);
   let compRegistry = new CompetitionRegistry(gameRegistry, compTypes);
@@ -14,6 +17,14 @@ export default function (Game, compTypes) {
   gameRegistry.restoreAllStoredGames(Game).then(
       () => compRegistry.restoreAllStoredCompetitions(Game, gameRegistry)
   );
+
+  if (populateConfig) {
+    populateConfig.competitions.forEach(function (competitionParams) {
+      if (competitionParams.gameName === Game.name) {
+        compRegistry.create(competitionParams);
+      }
+    });
+  }
 
   let router = new express.Router();
 

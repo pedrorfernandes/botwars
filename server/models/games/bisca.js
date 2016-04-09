@@ -99,15 +99,13 @@ class Bisca extends Game {
     this.trump = getSuit(this.trumpCard);
     this.nextPlayer = this.getPlayerAfter(this.trumpPlayer);
     this.lastTrick = null;
-    this.trick = new Array(this.numberOfPlayers).fill(null);
-    this.wonCards = new Array(this.numberOfPlayers).fill([]);
+    this.trick = _.range(this.numberOfPlayers).map(() => null);
+    this.wonCards = _.range(this.numberOfPlayers).map(() => []);
     this.round = 1;
     this.suitToFollow = null;
-    this.hasSuits = new Array(this.numberOfPlayers).fill({
-      '♠': true, '♥': true, '♦': true, '♣': true
-    });
+    this.hasSuits = _.range(this.numberOfPlayers).map(() => ({ '♠': true, '♥': true, '♦': true, '♣': true }));
 
-    this.score = new Array(this.numberOfPlayers).fill(0);
+    this.score = _.range(this.numberOfPlayers).map(() => 0);
     this.error = false;
     this.winners = null;
   }
@@ -208,7 +206,7 @@ class Bisca extends Game {
 
       this.previousPlayer = this.nextPlayer;
       this.lastTrick = this.trick;
-      this.trick = new Array(this.numberOfPlayers).fill(null);
+      this.trick = _.range(this.numberOfPlayers).map(() => null);
       this.nextPlayer = Bisca._toPlayer(roundWinnerIndex);
       this.round += 1;
       this.suitToFollow = null;
@@ -313,9 +311,8 @@ class Bisca extends Game {
   }
 
   _updatePlayerHasSuits(playerIndex, playedCard) {
-    let playedSuit = getSuit(playedCard);
     if (this.suitToFollow
-      && this.suitToFollow !== playedSuit
+      && this.suitToFollow !== getSuit(playedCard)
       && this._isMandatoryToFollowSuit()) {
 
       this.hasSuits[playerIndex][this.suitToFollow] = false;
