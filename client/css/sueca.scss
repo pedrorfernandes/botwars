@@ -2,6 +2,8 @@ $table-color: #45a173;
 $highlight-color: rgba(220, 158, 69, 0.6);
 $team1-color: #fc4225;
 $team2-color: #0029ef;
+$team3-color: #0a7510;
+$team4-color: #ef771c;
 
 #sueca, #mini-sueca {
   margin: 15px 5px 25px;
@@ -48,6 +50,16 @@ $team2-color: #0029ef;
     &.team2 {
       color: $team2-color;
       border-color: $team2-color;
+    }
+
+    &.team3 {
+      color: $team3-color;
+      border-color: $team3-color;
+    }
+
+    &.team4 {
+      color: $team4-color;
+      border-color: $team4-color;
     }
 
     &.inline {

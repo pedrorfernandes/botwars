@@ -19,6 +19,11 @@
       "name": "Bisca",
       "serverModule": "./models/games/bisca",
       "clientComponent": "./components/games/Bisca"
+    },
+    "hearts": {
+      "name": "Hearts",
+      "serverModule": "./models/games/hearts",
+      "clientComponent": "./components/games/Hearts"
     }
   },
 

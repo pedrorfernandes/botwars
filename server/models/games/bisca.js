@@ -162,7 +162,7 @@ class Bisca extends Game {
       return this.getAllPossibilities(this.nextPlayer).concat(playableCards);
     }
 
-    return playableCards
+    return playableCards;
   }
 
   isValidMove(player, card) {
@@ -241,12 +241,6 @@ class Bisca extends Game {
 
   _getPlayerIndexAfter(player) {
     return (player + 1) % this.numberOfPlayers;
-  }
-
-  onMoveTimeout() {
-    this.winners = Bisca.getTeam(this.getPlayerAfter(this.nextPlayer));
-    this.nextPlayer = null;
-    return true;
   }
 
   getFullState() {
@@ -364,7 +358,16 @@ class Bisca extends Game {
   }
 
   _isInvalidAssignment(hands) {
+    if (!hands) { return true; }
+    let self = this;
 
+    return _.some(hands, function isInvalid (hand, playerIndex) {
+
+      return _.some(hand, function hasInvalidSuit (card) {
+        return self.hasSuits[playerIndex][getSuit(card)] === false;
+      });
+
+    });
   }
 
   _getSeenCards() {
@@ -422,10 +425,6 @@ class Bisca extends Game {
 
   getAllPossibleStates() {
     throw new Error(this.constructor.name + ".getAllPossibleStates not implemented");
-  }
-
-  getTeam(player) {
-
   }
 
   getGameValue() {

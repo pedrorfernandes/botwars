@@ -36,8 +36,14 @@ function getRankClass(card) {
     case "K": return "rank13";
     case "Q": return "rank12";
     case "J": return "rank11";
+    case "1": return "rank10";
     default: return `rank${value}`;
   }
+}
+
+function cardIndex(card) {
+  let value = getValue(card);
+  return ['2', '3', '4', '5', '6', '7', '9', '8', '1', 'Q', 'J', 'K', 'A'].indexOf(value);
 }
 
 class Card extends React.Component {
@@ -48,6 +54,7 @@ class Card extends React.Component {
       case "K": return "rank13";
       case "Q": return "rank12";
       case "J": return "rank11";
+      case "1": return "rank10";
       default: return `rank${value}`;
     }
   }
@@ -87,25 +94,13 @@ const CurrentTrick = ({ cards, lastTrickCards, delta = 10, rot }) => {
 };
 
 const PlayerLabel = ({ player, nextPlayer, top, left }) => {
-  let team = player % 2 ? 1 : 2;
+  let team = player;
   let isCurrentPlayer = player === nextPlayer;
   return (
     <div className={`player-chip team${team} ${isCurrentPlayer ? "current-player" : ""}`}
          style={{ top: `${top}%`, left: `${left}%` }}>{player}</div>
   );
 };
-
-function cardIndex(card) {
-  let value = getValue(card);
-  switch (value) {
-    case "A": return 10;
-    case "7": return 9;
-    case "K": return 8;
-    case "J": return 7;
-    case "Q": return 6;
-    default: return parseInt(value) - 1;
-  }
-}
 
 const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   deltaCx = 2, deltaCy = 3, onCardClick, rot }) => {
@@ -187,22 +182,24 @@ const LastTrick = ({ cards, x = 10, y = 85, delta = 5, rot }) => {
   );
 };
 
-const Scoreboard = ({ score, deck = [] }) => (
-  <div className="scoreboard">
-    <span>Score</span>
-    <br />
-    <span><span className="player-chip inline team1" />Team 1: {score ? score[0] : "-"}</span>
-    <br />
-    <span><span className="player-chip inline team2" />Team 2: {score ? score[1] : "-"}</span>
-    <br />
-    <span>Deck size: {deck.length}</span>
-  </div>
-);
+const Scoreboard = ({ score = [] }) => {
+  return (
+    <div className="scoreboard">
+      <span>Score</span>
+      <br/><span><span className="player-chip inline team1" />Player 1: {score ? score[0] : "-"}</span>
+      <br/><span><span className="player-chip inline team2" />Player 2: {score ? score[1] : "-"}</span>
+      <br/><span><span className="player-chip inline team3" />Player 3: {score ? score[2] : "-"}</span>
+      <br/><span><span className="player-chip inline team4" />Player 4: {score ? score[3] : "-"}</span>
+    </div>
+  );
+};
 
-const Bisca = ({ player, gameState, isLastState, onMove }) => {
+const Hearts = ({ player, gameState, isLastState, onMove }) => {
   let { nextPlayer, hand, hands, trick, lastTrick, trumpCard,
-    trumpPlayer, score, deck } = gameState || {};
+    trumpPlayer, score } = gameState || {};
   
+  console.log(gameState);
+
   let rot = player ? (5 - player) % 4 : 0;
   let onCardClick = isLastState && player === nextPlayer ? onMove : null;
 
@@ -217,7 +214,7 @@ const Bisca = ({ player, gameState, isLastState, onMove }) => {
                    onCardClick={onCardClick} />
             <Trump card={trumpCard} player={trumpPlayer} />
             <LastTrick cards={lastTrick} rot={rot} />
-            <Scoreboard score={score} deck={deck} />
+            <Scoreboard score={score} />
           </div>
         </div>
       </Col>
@@ -225,4 +222,4 @@ const Bisca = ({ player, gameState, isLastState, onMove }) => {
   );
 };
 
-export default Bisca;
+export default Hearts;
