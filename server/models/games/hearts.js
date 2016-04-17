@@ -42,8 +42,20 @@ function getScaledValue(card) {
   return valuesScale[card[0]];
 }
 
-function isVisible(card) {
+function isCardVisible(card) {
   return card !== null;
+}
+
+function isCardHidden(card) {
+  return card === null;
+}
+
+function isHeartsOrQueenOfSpadesCard(card) {
+  return getSuit(card) === '♥' || card === 'Q♠';
+}
+
+function isHeartsCard(card) {
+  return getSuit(card) === '♥';
 }
 
 var valuesScale = {
@@ -52,8 +64,6 @@ var valuesScale = {
 
 var ranks = ['A', 'K', 'J', 'Q', '1', '8', '9', '7', '6', '5', '4', '3', '2'];
 var suits = ['♠', '♥', '♦', '♣'];
-
-var allHearts = ['Q♠', 'A♥', 'K♥', 'J♥', 'Q♥', '1♥', '8♥', '9♥', '7♥', '6♥', '5♥', '4♥', '3♥', '2♥']
 
 var startingDeck = suits.reduce(function(deck, suit) {
   return deck.concat(ranks.map(function(rank) {
@@ -71,6 +81,8 @@ function copyHands(hand) {
 
 let numberOfPlayers = 4;
 
+let storeScores = true;
+
 class Hearts extends Game {
   constructor(options = {}) {
     super(options);
@@ -84,30 +96,34 @@ class Hearts extends Game {
     let rng = seed ? randomGenerator(seed) : randomGenerator();
     let shuffledDeck = shuffle(startingDeck, rng);
     this.hands = _.chunk(shuffledDeck, shuffledDeck.length / numberOfPlayers);
-    let nextPlayerIndex = _.findIndex(this.hands, hand => _.includes(hand, '2♣'));
-    this.nextPlayer = toPlayer(nextPlayerIndex);
+    let currentPlayerIndex = _.findIndex(this.hands, hand => _.includes(hand, '2♣'));
+    this.currentPlayer = toPlayer(currentPlayerIndex);
     this.lastTrick = null;
     this.trick = _.range(numberOfPlayers).map(() => null);
     this.wonCards = _.range(numberOfPlayers).map(() => []);
     this.round = 1;
     this.suitToFollow = null;
     this.hasSuits = _.range(numberOfPlayers).map(() => ({ '♠': true, '♥': true, '♦': true, '♣': true }));
+    this.receivedHearts = _.range(numberOfPlayers).map(() => false);
     this.isHeartsBroken = false;
-    
-    this.score = _.range(numberOfPlayers).map(() => 0);
+
+    if (storeScores) {
+      this.score = _.range(numberOfPlayers).map(() => 0);
+    }
     this.error = false;
     this.winners = null;
-    
-    this.playerThatShotTheMoon = null;
   }
 
   _clone(game) {
-    this.nextPlayer = game.nextPlayer;
+    this.currentPlayer = game.currentPlayer;
     this.hands = copyHands(game.hands);
     this.trick =  game.trick.slice();
     this.wonCards = copyHands(game.wonCards);
     this.round = game.round;
     this.suitToFollow = game.suitToFollow;
+    this.receivedHearts = game.receivedHearts.slice();
+    this.isHeartsBroken = game.isHeartsBroken;
+    this.score = game.score;
     this.hasSuits = game.hasSuits.map(function(playerHasSuits) {
       return {
         '♠': playerHasSuits['♠'],
@@ -120,9 +136,9 @@ class Hearts extends Game {
 
   getFullState() {
     return _.pick(this, [
-      'numberOfPlayers', 'nextPlayer', 'hands', 'trumpCard',
-      'startingPlayer', 'trump', 'trick', 'lastTrick', 'wonCards', 'round',
-      'suitToFollow', 'hasSuits', 'error', 'winners', 'score'
+      'currentPlayer', 'hands', 'trick', 'lastTrick',
+      'wonCards', 'round', 'suitToFollow', 'hasSuits',
+      'error', 'winners', 'score', 'receivedHearts'
     ]);
   }
 
@@ -139,8 +155,8 @@ class Hearts extends Game {
     });
   }
   
-  getPlayerCount() { 
-    return numberOfPlayers; 
+  getPlayerCount() {
+    return numberOfPlayers;
   }
 
   isEnded() {
@@ -151,21 +167,21 @@ class Hearts extends Game {
     return this.error; 
   }
 
-  getNextPlayer() { 
-    return this.nextPlayer; 
+  getNextPlayer() {
+    return this.currentPlayer;
   }
 
   _getCardsInTableCount() {
-    return this.trick.reduce((count, card) => 
+    return this.trick.reduce((count, card) =>
       card !== null ? count + 1 : count, 0);
   }
 
   getPossibleMoves(playerPerspective) {
-    if (playerPerspective && playerPerspective !== this.nextPlayer) {
+    if (playerPerspective && playerPerspective !== this.currentPlayer) {
       return this.getAllPossibilities(playerPerspective);
     }
 
-    let playerIndex = toPlayerIndex(this.nextPlayer);
+    let playerIndex = toPlayerIndex(this.currentPlayer);
     let hand = this.hands[playerIndex];
     
     if (this.round === 1 && _.includes(hand, '2♣')) {
@@ -200,7 +216,7 @@ class Hearts extends Game {
   }
 
   isValidMove(player, card) {
-    return player === this.nextPlayer
+    return player === this.currentPlayer
       && this.getPossibleMoves(player).indexOf(card) > -1;
   }
 
@@ -246,17 +262,23 @@ class Hearts extends Game {
 
       this.wonCards[roundWinnerIndex] = this.wonCards[roundWinnerIndex].concat(this.trick);
 
-      this.lastTrick = this.trick;
-      this.trick = _.range(numberOfPlayers).map(() => null);
-      this.nextPlayer = toPlayer(roundWinnerIndex);
-      this.round += 1;
-      this.suitToFollow = null;
-      
-      if (_.every(this.hands, hand => hand.length === 0)) {
-        this.winners = this.getWinners();
+      if (!this.receivedHearts[roundWinnerIndex] && _.some(this.trick, isHeartsCard)) {
+        this.receivedHearts[roundWinnerIndex] = true;
       }
 
-      this.score = this._getScores();
+      this.lastTrick = this.trick;
+      this.trick = _.range(numberOfPlayers).map(() => null);
+      this.currentPlayer = toPlayer(roundWinnerIndex);
+      this.round += 1;
+      this.suitToFollow = null;
+
+      if (_.every(this.hands, hand => hand.length === 0)) {
+        this.winners = this._getWinners();
+      }
+
+      if (storeScores) {
+        this.score = this._getScores();
+      }
 
       return;
     }
@@ -265,11 +287,11 @@ class Hearts extends Game {
       this.suitToFollow = getSuit(card);
     }
 
-    this.nextPlayer = this.getPlayerAfter(this.nextPlayer);
+    this.currentPlayer = this.getPlayerAfter(this.currentPlayer);
   }
 
   performMove(card)  {
-    return this.move(this.nextPlayer, card);
+    return this.move(this.currentPlayer, card);
   }
 
   getPlayerAfter(player) {
@@ -279,23 +301,25 @@ class Hearts extends Game {
   _getPlayerIndexAfter(player) {
     return (player + 1) % numberOfPlayers;
   }
-  
+
   _getPlayerThatShotTheMoon() {
-    let wonHearts = this.wonCards.map(playerCards => 
-      playerCards.filter(card => card === 'Q♠' || getSuit(card) === '♥'));
-    
-    let playerThatShotTheMoonIndex = _.findIndex(wonHearts, hearts => hearts.length === allHearts.length);
-    
-    return playerThatShotTheMoonIndex ? toPlayer(playerThatShotTheMoonIndex) : null;
+    let playersThatReceivedHearts = this.receivedHearts.filter(received => received === true);
+    if (playersThatReceivedHearts.length === 1) {
+      return toPlayer(playersThatReceivedHearts[0]);
+    }
+
+    return null;
   }
 
   getScore(players) {
-    let playerThatShotTheMoon = this._getPlayerThatShotTheMoon();
-    
-    if (playerThatShotTheMoon) {
-      return players.map(player => player === playerThatShotTheMoon ? 0 : 26);
+    if (this.round === 14) {
+      let playerThatShotTheMoon = this._getPlayerThatShotTheMoon();
+
+      if (playerThatShotTheMoon) {
+        return players.map(player => player === playerThatShotTheMoon ? 0 : 26);
+      }
     }
-    
+
     let wonCards = players.reduce((cards, player) => {
       let playerIndex = toPlayerIndex(player);
       return cards.concat(this.wonCards[playerIndex]);
@@ -303,7 +327,7 @@ class Hearts extends Game {
 
     return sum(wonCards, card => getValue(card));
   }
-  
+
   _getPlayers() {
     return [1,2,3,4];
   }
@@ -312,15 +336,17 @@ class Hearts extends Game {
     return this._getPlayers().map(player => this.getScore([player]));
   }
 
-  getWinners() {
+  _getWinners() {
     let players = this._getPlayers();
     let playerScores = this._getScores();
 
     let minScore = min(playerScores);
 
-    let winningTeam = players.filter((player, playerIndex) => playerScores[playerIndex] === minScore);
+    return players.filter((player, playerIndex) => playerScores[playerIndex] === minScore);
+  }
 
-    return winningTeam.map(toPlayer);
+  getWinners() {
+    return this.winners;
   }
 
   getAllPossibilities(playerPerspective) {
@@ -329,12 +355,10 @@ class Hearts extends Game {
 
     let playedCards = _.flatten(this.wonCards);
     let inRoundCards = this.trick.filter(card => card !== null);
-    let visibleDeckCards = this.deck.filter(card => card !== null);
-    let impossibilities = playerPerspectiveHand.concat(playedCards)
-      .concat(inRoundCards).concat(visibleDeckCards);
+    let impossibilities = playerPerspectiveHand.concat(playedCards).concat(inRoundCards);
 
-    let nextPlayerIndex = toPlayerIndex(this.nextPlayer);
-    let hasSuits = this.hasSuits[nextPlayerIndex];
+    let currentPlayerIndex = toPlayerIndex(this.currentPlayer);
+    let hasSuits = this.hasSuits[currentPlayerIndex];
     return startingDeck.filter(card => {
       let suit = getSuit(card);
       return hasSuits[suit] && !_.includes(impossibilities, card);
@@ -342,14 +366,25 @@ class Hearts extends Game {
   }
 
   _isInvalidAssignment(hands) {
+    if (!hands) {
+      return true;
+    }
 
+    let self = this;
+
+    return _.some(hands, function isInvalid (hand, playerIndex) {
+
+      return _.some(hand, function hasInvalidSuit (card) {
+        return self.hasSuits[playerIndex][getSuit(card)] === false;
+      });
+
+    });
   }
 
   _getSeenCards() {
     return _.flatten(this.wonCards)
       .concat(_.flatten(this.hands).filter(isCardVisible))
-      .concat(this.trick.filter(isCardVisible))
-      .concat(this.deck.filter(isCardVisible));
+      .concat(this.trick.filter(isCardVisible));
   }
 
   _getUnknownCards() {
@@ -384,13 +419,6 @@ class Hearts extends Game {
 
     this.hands = possibleHands;
 
-    this.deck = this.deck.map(card => {
-      if (isCardVisible(card)) {
-        return card;
-      }
-      return shuffledUnknownCards.splice(0, 1)[0];
-    });
-
     return this;
   }
 
@@ -407,7 +435,20 @@ class Hearts extends Game {
   }
 
   getPrettyPlayerHand(player) {
-    throw new Error(this.constructor.name + ".getPrettyPlayerHand not implemented");
+    var suitOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
+
+    var hand = this.hands[toPlayerIndex(player)].slice()
+      .filter(c => c !== null)
+      .sort(function(cardA, cardB) {
+        var valueA = suitOrder[getSuit(cardA)] * 100 + getScaledValue(cardA);
+        var valueB = suitOrder[getSuit(cardB)] * 100 + getScaledValue(cardB);
+        return valueB - valueA;
+      });
+    var grouped = _.groupBy(hand, function(card) { return getSuit(card); });
+    var string = _.reduce(grouped, function(string, suit) {
+      return string + ' | ' + suit.join(' ')
+    }, '');
+    return 'His hand is ' + string;
   }
 }
 

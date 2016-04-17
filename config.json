@@ -39,7 +39,8 @@
     "games": [],
     "competitions": [
       { "gameName": "Bisca", "name": "Bisca Competition", "type": "match", "gameCount": 10, "playerCount": 2 },
-      { "gameName": "Sueca", "name": "Sueca Competition", "type": "match", "gameCount": 10, "playerCount": 4 }
+      { "gameName": "Sueca", "name": "Sueca Competition", "type": "match", "gameCount": 10, "playerCount": 4 },
+      { "gameName": "Hearts", "name": "Hearts Competition", "type": "match", "gameCount": 10, "playerCount": 4 }
     ]
   },
 

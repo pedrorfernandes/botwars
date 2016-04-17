@@ -1,3 +1,5 @@
+let _ = require('lodash');
+
 class Game {
   constructor({ name, ...params } = {}) {
     if (this.constructor === Game) {
@@ -65,6 +67,9 @@ class Game {
 
   // getState(player)
   getState(player) {
+    if (_.isUndefined(player)) {
+      return this.getFullState();
+    }
     return this.getStateView(this.getFullState(), player);
   }
 }

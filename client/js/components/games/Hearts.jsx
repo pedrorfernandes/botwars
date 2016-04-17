@@ -103,7 +103,7 @@ const PlayerLabel = ({ player, nextPlayer, top, left }) => {
 };
 
 const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
-  deltaCx = 2, deltaCy = 3, onCardClick, rot }) => {
+  deltaCx = 2, deltaCy = 3.7, onCardClick, rot }) => {
 
   let info = playerInfo[((player - 1) + rot) % 4];
   let x = 50 + info.x * deltaX - info.y * deltaCx * 4.5;
@@ -119,7 +119,8 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
 
   let cardElems = [];
   for (let i = 0; i < cardCount; i++) {
-    cardElems.push(<Card card={sortedCards[i]} top={y} left={x} zIndex={i} key={`card${i}`}
+    let z = info.x === -1 || info.y === -1 ? cardCount - i : i;
+    cardElems.push(<Card card={sortedCards[i]} top={y} left={x} zIndex={z} key={`card${i}`}
                          onClick={onCardClick} />);
     x += info.y * deltaCx;
     y += info.x * deltaCy;
@@ -138,14 +139,9 @@ const Hands = ({ player, nextPlayer, handCards, hands, trick, rot, onCardClick }
   if (!trick) return <div className="hands" />;
 
   let handComponents = hands.map((hand, playerIndex) => {
-    if (playerIndex === player - 1) {
-      return <Hand player={playerIndex + 1} nextPlayer={nextPlayer} cards={handCards}
-                   cardCount={handCards.length} key={`hand${playerIndex}`} rot={rot}
+    return <Hand player={playerIndex + 1} nextPlayer={nextPlayer} cards={hand}
+                   cardCount={hand.length} key={`hand${playerIndex}`} rot={rot}
                    onCardClick={onCardClick ? card => onCardClick(card, playerIndex) : null} />
-    } else {
-      return <Hand player={playerIndex + 1} nextPlayer={nextPlayer} cardCount={hand.length}
-                                key={`hand${playerIndex}`} rot={rot} />
-    }
   });
 
   return (
