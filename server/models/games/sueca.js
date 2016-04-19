@@ -84,9 +84,15 @@ class Sueca extends Game {
   }
 
   getStateView(fullState, player) {
+    let playerIndex = player - 1;
+    let hideIfNotTrumpCard = card => Sueca.cardEquals(this.trump)(card) ? card : null;
+    let hideHandIfNotPlayer = function(hand, index) {
+      return playerIndex === index ? hand : hand.map(hideIfNotTrumpCard);
+    };
+    
     return {
       ...fullState,
-      hands: undefined,
+      hands: fullState.hands.map(hideHandIfNotPlayer),
       hand: fullState.hands[player - 1]
     };
   }

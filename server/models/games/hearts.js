@@ -96,8 +96,8 @@ class Hearts extends Game {
     let rng = seed ? randomGenerator(seed) : randomGenerator();
     let shuffledDeck = shuffle(startingDeck, rng);
     this.hands = _.chunk(shuffledDeck, shuffledDeck.length / numberOfPlayers);
-    let currentPlayerIndex = _.findIndex(this.hands, hand => _.includes(hand, '2♣'));
-    this.currentPlayer = toPlayer(currentPlayerIndex);
+    let nextPlayerIndex = _.findIndex(this.hands, hand => _.includes(hand, '2♣'));
+    this.nextPlayer = toPlayer(nextPlayerIndex);
     this.lastTrick = null;
     this.trick = _.range(numberOfPlayers).map(() => null);
     this.wonCards = _.range(numberOfPlayers).map(() => []);
@@ -115,7 +115,7 @@ class Hearts extends Game {
   }
 
   _clone(game) {
-    this.currentPlayer = game.currentPlayer;
+    this.nextPlayer = game.nextPlayer;
     this.hands = copyHands(game.hands);
     this.trick =  game.trick.slice();
     this.wonCards = copyHands(game.wonCards);
@@ -136,7 +136,7 @@ class Hearts extends Game {
 
   getFullState() {
     return _.pick(this, [
-      'currentPlayer', 'hands', 'trick', 'lastTrick',
+      'nextPlayer', 'hands', 'trick', 'lastTrick',
       'wonCards', 'round', 'suitToFollow', 'hasSuits',
       'error', 'winners', 'score', 'receivedHearts'
     ]);
@@ -168,7 +168,7 @@ class Hearts extends Game {
   }
 
   getNextPlayer() {
-    return this.currentPlayer;
+    return this.nextPlayer;
   }
 
   _getCardsInTableCount() {
@@ -177,11 +177,11 @@ class Hearts extends Game {
   }
 
   getPossibleMoves(playerPerspective) {
-    if (playerPerspective && playerPerspective !== this.currentPlayer) {
+    if (playerPerspective && playerPerspective !== this.nextPlayer) {
       return this.getAllPossibilities(playerPerspective);
     }
 
-    let playerIndex = toPlayerIndex(this.currentPlayer);
+    let playerIndex = toPlayerIndex(this.nextPlayer);
     let hand = this.hands[playerIndex];
     
     if (this.round === 1 && _.includes(hand, '2♣')) {
@@ -216,7 +216,7 @@ class Hearts extends Game {
   }
 
   isValidMove(player, card) {
-    return player === this.currentPlayer
+    return player === this.nextPlayer
       && this.getPossibleMoves(player).indexOf(card) > -1;
   }
 
@@ -268,7 +268,7 @@ class Hearts extends Game {
 
       this.lastTrick = this.trick;
       this.trick = _.range(numberOfPlayers).map(() => null);
-      this.currentPlayer = toPlayer(roundWinnerIndex);
+      this.nextPlayer = toPlayer(roundWinnerIndex);
       this.round += 1;
       this.suitToFollow = null;
 
@@ -287,11 +287,11 @@ class Hearts extends Game {
       this.suitToFollow = getSuit(card);
     }
 
-    this.currentPlayer = this.getPlayerAfter(this.currentPlayer);
+    this.nextPlayer = this.getPlayerAfter(this.nextPlayer);
   }
 
   performMove(card)  {
-    return this.move(this.currentPlayer, card);
+    return this.move(this.nextPlayer, card);
   }
 
   getPlayerAfter(player) {
@@ -357,8 +357,8 @@ class Hearts extends Game {
     let inRoundCards = this.trick.filter(card => card !== null);
     let impossibilities = playerPerspectiveHand.concat(playedCards).concat(inRoundCards);
 
-    let currentPlayerIndex = toPlayerIndex(this.currentPlayer);
-    let hasSuits = this.hasSuits[currentPlayerIndex];
+    let nextPlayerIndex = toPlayerIndex(this.nextPlayer);
+    let hasSuits = this.hasSuits[nextPlayerIndex];
     return startingDeck.filter(card => {
       let suit = getSuit(card);
       return hasSuits[suit] && !_.includes(impossibilities, card);

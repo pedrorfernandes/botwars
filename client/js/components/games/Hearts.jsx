@@ -22,11 +22,17 @@ const suitMap = {
 };
 
 function getSuit(card) {
-  return suitMap[card[1]];
+  if (card) {
+    return suitMap[card[1]];
+  }
+  return null;
 }
 
 function getValue(card) {
-  return card[0];
+  if (card) {
+    return card[0];
+  }
+  return null;
 }
 
 function getRankClass(card) {
@@ -103,7 +109,7 @@ const PlayerLabel = ({ player, nextPlayer, top, left }) => {
 };
 
 const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
-  deltaCx = 2, deltaCy = 3.7, onCardClick, rot }) => {
+  deltaCx = 2, deltaCy = 3.6, onCardClick, rot }) => {
 
   let info = playerInfo[((player - 1) + rot) % 4];
   let x = 50 + info.x * deltaX - info.y * deltaCx * 4.5;

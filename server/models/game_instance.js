@@ -118,10 +118,12 @@ class GameInstance extends EventEmitter {
   }
 
   getHistory(player) {
-    return this.history.events.map(histEvent =>
-      histEvent.eventType === "move" ? histEvent :
-        { eventType: "state", state: this.game.getStateView(histEvent.fullState, player) }
-    );
+    return this.history.events.map(histEvent => {
+      let gameState = _.isUndefined(player) ? histEvent.fullState : 
+        this.game.getStateView(histEvent.fullState, player);
+      
+      return histEvent.eventType === "move" ? histEvent : {eventType: "state", state: gameState}
+    });
   }
 
   _onStateChange({ announceState = true, announceMove = true } = {}) {
