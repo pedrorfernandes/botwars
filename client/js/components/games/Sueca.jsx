@@ -10,20 +10,70 @@ const playerInfo = [
   { x: -1, y: 0, labelTop: 30, labelLeft: 18 }
 ];
 
-class Card extends React.Component {
-  getRankClass(value) {
-    switch (value) {
-      case "A": return "rank1";
-      case "K": return "rank13";
-      case "Q": return "rank12";
-      case "J": return "rank11";
-      default: return `rank${value}`;
-    }
+const suitMap = {
+  spades: "♠",
+  hearts: "♥",
+  diamonds: "♦",
+  clubs: "♣",
+  "♠": "spades",
+  "♥": "hearts",
+  "♦": "diamonds",
+  "♣": "clubs"
+};
+
+function getSuitString(card) {
+  if (card) {
+    return suitMap[card[1]];
   }
+  return null;
+}
+
+function getSuit(card) {
+  if (card) {
+    return card[1];
+  }
+  return null;
+}
+
+function getValue(card) {
+  if (card) {
+    return card[0];
+  }
+  return null;
+}
+
+function getRankClass(card) {
+  let value = getValue(card);
+  switch (value) {
+    case "A": return "rank1";
+    case "K": return "rank13";
+    case "Q": return "rank12";
+    case "J": return "rank11";
+    case "1": return "rank10";
+    case null: return "";
+    default: return `rank${value}`;
+  }
+}
+
+function cardCompare(cardA, cardB) {
+  return cardOrder(cardA) - cardOrder(cardB);
+}
+
+function cardOrder(card) {
+  let value = getValue(card);
+  let suit = getSuit(card);
+
+  let suitOrder = ["♠", "♥", "♣", "♦"].indexOf(suit) + 1;
+  let valueOrder = ["2", "3", "4", "5", "6", "9", "8", "1", "Q", "J", "K", "7", "A"].indexOf(value) + 1;
+
+  return suitOrder * 100 + valueOrder;
+}
+
+class Card extends React.Component {
 
   render() {
     let { card, top, left, zIndex, onClick, ...props } = this.props;
-    let cardClasses = "card " + (card ? ` ${card.suit} ${this.getRankClass(card.value)}` : "");
+    let cardClasses = "card " + (card ? ` ${getSuitString(card)} ${getRankClass(card)}` : "");
     return (
         <div className={cardClasses} style={{ top: `${top}%`, left: `${left}%`, zIndex }}
              onClick={onClick ? () => onClick(card) : null} {...props}>
@@ -71,27 +121,6 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   let x = 50 + info.x * deltaX - info.y * deltaCx * 4.5;
   let y = 50 + info.y * deltaY - info.x * deltaCy * 4.5;
 
-  function cardIndex(card) {
-    switch (card.value) {
-      case "A": return 10;
-      case "7": return 9;
-      case "K": return 8;
-      case "J": return 7;
-      case "Q": return 6;
-      default: return parseInt(card.value) - 1;
-    }
-  }
-
-  function cardCompare(card1, card2) {
-    if (!card1 || !card2) {
-      return 0;
-    }
-    if (card1.suit !== card2.suit) {
-      return card1.suit < card2.suit ? -1 : 1; 
-    }
-    return cardIndex(card1) - cardIndex(card2);
-  }
-
   let sortedCards = cards ? cards.sort(cardCompare) : {};
 
   let cardElems = [];
@@ -112,7 +141,7 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   );
 };
 
-const Hands = ({ player, nextPlayer, handCards, hands, tricksDone, currentTrick, rot, onCardClick }) => {
+const Hands = ({ nextPlayer, hands, currentTrick, rot, onCardClick }) => {
   if (!currentTrick) return <div className="hands" />;
 
   let handComponents = hands.map((hand, playerIndex) => {
@@ -166,8 +195,8 @@ const Scoreboard = ({ score }) => (
 );
 
 const Sueca = ({ player, gameState, isLastState, onMove }) => {
-  let { nextPlayer, hand, hands, currentTrick, lastTrick, tricksDone,
-      trump, trumpPlayer, score } = gameState || {};
+  let { trumpPlayer, nextPlayer, hands, hand, trick, lastTrick, tricksDone,
+      trumpCard, score } = gameState || {};
 
   let rot = player ? (5 - player) % 4 : 0;
   let onCardClick = isLastState && player === nextPlayer ? onMove : null;
@@ -177,11 +206,11 @@ const Sueca = ({ player, gameState, isLastState, onMove }) => {
         <Col lg={12} className="flex">
           <div id="sueca" className="flex">
             <div className="deck flex">
-              <CurrentTrick cards={currentTrick} lastTrickCards={lastTrick} rot={rot} />
+              <CurrentTrick cards={trick} lastTrickCards={lastTrick} rot={rot} />
               <Hands player={player} nextPlayer={nextPlayer} handCards={hand}
-                     hands={hands} tricksDone={tricksDone} currentTrick={currentTrick} 
+                     hands={hands} tricksDone={tricksDone} currentTrick={trick}
                      rot={rot} onCardClick={onCardClick} />
-              <Trump card={trump} player={trumpPlayer} />
+              <Trump card={trumpCard} player={trumpPlayer} />
               <LastTrick cards={lastTrick} rot={rot} />
               <Scoreboard score={score} />
             </div>
