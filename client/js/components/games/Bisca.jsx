@@ -21,9 +21,16 @@ const suitMap = {
   "♣": "clubs"
 };
 
-function getSuit(card) {
+function getSuitString(card) {
   if (card) {
     return suitMap[card[1]];
+  }
+  return null;
+}
+
+function getSuit(card) {
+  if (card) {
+    return card[1];
   }
   return null;
 }
@@ -46,21 +53,26 @@ function getRankClass(card) {
   }
 }
 
-class Card extends React.Component {
+function cardCompare(cardA, cardB) {
+  return cardOrder(cardA) - cardOrder(cardB);
+}
 
-  getRankClass(value) {
-    switch (value) {
-      case "A": return "rank1";
-      case "K": return "rank13";
-      case "Q": return "rank12";
-      case "J": return "rank11";
-      default: return `rank${value}`;
-    }
-  }
+function cardOrder(card) {
+  let value = getValue(card);
+  let suit = getSuit(card);
+
+  let suitOrder = ["♠", "♥", "♣", "♦"].indexOf(suit) + 1;
+  let valueOrder = ["2", "3", "4", "5", "6", "9", "8", "1", "Q", "J", "K", "7", "A"]
+      .indexOf(value) + 1;
+
+  return suitOrder * 100 + valueOrder;
+}
+
+class Card extends React.Component {
 
   render() {
     let { card, top, left, zIndex, onClick, ...props } = this.props;
-    let cardClasses = "card " + (card ? `${getSuit(card)} ${getRankClass(card)}` : "");
+    let cardClasses = "card " + (card ? `${getSuitString(card)} ${getRankClass(card)}` : "");
     return (
       <div className={cardClasses} style={{ top: `${top}%`, left: `${left}%`, zIndex }}
            onClick={onClick ? () => onClick(card) : null} {...props}>
@@ -101,30 +113,12 @@ const PlayerLabel = ({ player, nextPlayer, top, left }) => {
   );
 };
 
-function cardIndex(card) {
-  let value = getValue(card);
-  switch (value) {
-    case "A": return 10;
-    case "7": return 9;
-    case "K": return 8;
-    case "J": return 7;
-    case "Q": return 6;
-    default: return parseInt(value) - 1;
-  }
-}
-
 const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   deltaCx = 2, deltaCy = 3.6, onCardClick, rot }) => {
 
   let info = playerInfo[((player - 1) + rot) % 4];
   let x = 50 + info.x * deltaX - info.y * deltaCx * 4.5;
   let y = 50 + info.y * deltaY - info.x * deltaCy * 4.5;
-
-  function cardCompare(card1, card2) {
-    let card1Suit = getSuit(card1), card2Suit = getSuit(card2);
-    if (card1Suit !== card2Suit) return card1Suit < card2Suit ? -1 : 1;
-    return cardIndex(card1) - cardIndex(card2);
-  }
 
   let sortedCards = cards ? cards.sort(cardCompare) : {};
 
@@ -145,7 +139,7 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   );
 };
 
-const Hands = ({ player, nextPlayer, handCards, hands, trick, rot, onCardClick }) => {
+const Hands = ({ nextPlayer, hands, trick, rot, onCardClick }) => {
   if (!trick) return <div className="hands" />;
 
   let handComponents = hands.map((hand, playerIndex) => {
@@ -203,7 +197,7 @@ const Scoreboard = ({ score, deck = [] }) => (
 const Bisca = ({ player, gameState, isLastState, onMove }) => {
   let { nextPlayer, hand, hands, trick, lastTrick, trumpCard,
     trumpPlayer, score, deck } = gameState || {};
-  
+
   let rot = player ? (5 - player) % 4 : 0;
   let onCardClick = isLastState && player === nextPlayer ? onMove : null;
 

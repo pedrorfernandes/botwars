@@ -21,9 +21,16 @@ const suitMap = {
   "♣": "clubs"
 };
 
-function getSuit(card) {
+function getSuitString(card) {
   if (card) {
     return suitMap[card[1]];
+  }
+  return null;
+}
+
+function getSuit(card) {
+  if (card) {
+    return card[1];
   }
   return null;
 }
@@ -47,9 +54,19 @@ function getRankClass(card) {
   }
 }
 
-function cardIndex(card) {
+function cardCompare(cardA, cardB) {
+  return cardOrder(cardA) - cardOrder(cardB);
+}
+
+function cardOrder(card) {
   let value = getValue(card);
-  return ['2', '3', '4', '5', '6', '7', '9', '8', '1', 'Q', 'J', 'K', 'A'].indexOf(value);
+  let suit = getSuit(card);
+
+  let suitOrder = ["♠", "♥", "♣", "♦"].indexOf(suit) + 1;
+  let valueOrder = ["2", "3", "4", "5", "6", "7", "9", "8", "1", "Q", "J", "K", "A"]
+      .indexOf(value) + 1;
+
+  return suitOrder * 100 + valueOrder;
 }
 
 class Card extends React.Component {
@@ -67,7 +84,7 @@ class Card extends React.Component {
 
   render() {
     let { card, top, left, zIndex, onClick, ...props } = this.props;
-    let cardClasses = "card " + (card ? `${getSuit(card)} ${getRankClass(card)}` : "");
+    let cardClasses = "card " + (card ? `${getSuitString(card)} ${getRankClass(card)}` : "");
     return (
       <div className={cardClasses} style={{ top: `${top}%`, left: `${left}%`, zIndex }}
            onClick={onClick ? () => onClick(card) : null} {...props}>
@@ -115,12 +132,6 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   let x = 50 + info.x * deltaX - info.y * deltaCx * 4.5;
   let y = 50 + info.y * deltaY - info.x * deltaCy * 4.5;
 
-  function cardCompare(card1, card2) {
-    let card1Suit = getSuit(card1), card2Suit = getSuit(card2);
-    if (card1Suit !== card2Suit) return card1Suit < card2Suit ? -1 : 1;
-    return cardIndex(card1) - cardIndex(card2);
-  }
-
   let sortedCards = cards ? cards.sort(cardCompare) : {};
 
   let cardElems = [];
@@ -141,7 +152,7 @@ const Hand = ({ player, nextPlayer, cards, cardCount, deltaX = 40, deltaY = 35,
   );
 };
 
-const Hands = ({ player, nextPlayer, handCards, hands, trick, rot, onCardClick }) => {
+const Hands = ({ nextPlayer, hands, trick, rot, onCardClick }) => {
   if (!trick) return <div className="hands" />;
 
   let handComponents = hands.map((hand, playerIndex) => {
@@ -188,10 +199,14 @@ const Scoreboard = ({ score = [] }) => {
   return (
     <div className="scoreboard">
       <span>Score</span>
-      <br/><span><span className="player-chip inline team1" />Player 1: {score ? score[0] : "-"}</span>
-      <br/><span><span className="player-chip inline team2" />Player 2: {score ? score[1] : "-"}</span>
-      <br/><span><span className="player-chip inline team3" />Player 3: {score ? score[2] : "-"}</span>
-      <br/><span><span className="player-chip inline team4" />Player 4: {score ? score[3] : "-"}</span>
+      <br/><span>
+      <span className="player-chip inline team1" />Player 1: {score ? score[0] : "-"}</span>
+      <br/><span>
+      <span className="player-chip inline team2" />Player 2: {score ? score[1] : "-"}</span>
+      <br/><span>
+      <span className="player-chip inline team3" />Player 3: {score ? score[2] : "-"}</span>
+      <br/><span>
+      <span className="player-chip inline team4" />Player 4: {score ? score[3] : "-"}</span>
     </div>
   );
 };
@@ -199,8 +214,6 @@ const Scoreboard = ({ score = [] }) => {
 const Hearts = ({ player, gameState, isLastState, onMove }) => {
   let { nextPlayer, hand, hands, trick, lastTrick, trumpCard,
     trumpPlayer, score } = gameState || {};
-  
-  console.log(gameState);
 
   let rot = player ? (5 - player) % 4 : 0;
   let onCardClick = isLastState && player === nextPlayer ? onMove : null;

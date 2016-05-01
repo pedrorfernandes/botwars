@@ -5,11 +5,14 @@ let Game = require('./game').default;
 let _ = require('lodash');
 let randomGenerator = require('seedrandom');
 let shuffle = require('../utils/shuffle').shuffle;
-let sample = require('../utils/shuffle').sample;
 
-// for compatibility lodash 3 <-> 4
-let max = _.maxBy || _.max;
-let sum = _.sumBy || _.sum;
+function toPlayer(playerIndex) {
+  return playerIndex + 1;
+}
+
+function toPlayerIndex(player) {
+  return player - 1;
+}
 
 function Card(rank, suit) {
   return rank + suit;
@@ -27,9 +30,15 @@ function getScaledValue(card) {
   return valuesScale[card[0]];
 }
 
-function isVisible(card) {
+function isCardVisible(card) {
   return card !== null;
 }
+
+function isCardHidden(card) {
+  return card === null;
+}
+
+let hiddenCard = null;
 
 var values = {
   'A': 11, '7': 10, 'K': 4, 'J': 3, 'Q': 2, '6': 0, '5': 0, '4': 0, '3': 0, '2': 0
@@ -70,11 +79,15 @@ function getNumberOfCardsPerPlayer(numberOfPlayers) {
   return cardNumbersPerPlayerNumbers[numberOfPlayers];
 }
 
+function isGame(object) {
+  return object.hands && object.trick;
+}
+
 class Bisca extends Game {
-  constructor(options = {}) {
+  constructor(options) {
     super(options);
 
-    if (typeof(options) == this.constructor.name) {
+    if (isGame(options)) {
       this._clone(options);
       return;
     }
@@ -89,14 +102,14 @@ class Bisca extends Game {
     this.deck = initialDeck.slice(initialNumberOfDealtCards, initialDeck.length);
     this.hands = _.chunk(initialHands, numberOfCardsPerPlayer);
     this.trumpCard = _.last(this.deck);
+    this.trump = getSuit(this.trumpCard);
 
-    if (options.lastGame && options.lastGame.trumpPlayer) {
-      this.trumpPlayer = this.getPlayerAfter(options.lastGame.trumpPlayer);
+    if (options.lastGame && options.lastGame.startingPlayer) {
+      this.startingPlayer = this.getPlayerAfter(options.lastGame.startingPlayer);
     } else {
-      this.trumpPlayer = Math.floor(rng() * this.numberOfPlayers + 1);
+      this.startingPlayer = Math.floor(rng() * this.numberOfPlayers + 1);
     }
 
-    this.trump = getSuit(this.trumpCard);
     this.nextPlayer = this.getPlayerAfter(this.trumpPlayer);
     this.lastTrick = null;
     this.trick = _.range(this.numberOfPlayers).map(() => null);
@@ -108,6 +121,40 @@ class Bisca extends Game {
     this.score = _.range(this.numberOfPlayers).map(() => 0);
     this.error = false;
     this.winners = null;
+  }
+
+  _clone(game) {
+    this.numberOfPlayers = game.numberOfPlayers;
+    this.deck = game.deck.slice();
+    this.hands = copyHands(game.hands);
+    this.trumpCard = game.trumpCard;
+    this.trump = game.trump;
+    this.startingPlayer = game.startingPlayer;
+    this.nextPlayer = game.nextPlayer;
+    this.lastTrick = null;
+    this.trick =  game.trick.slice();
+    this.wonCards = copyHands(game.wonCards);
+    this.round = game.round;
+    this.suitToFollow = game.suitToFollow;
+    this.hasSuits = game.hasSuits.map(function(playerHasSuits) {
+      return {
+        '♠': playerHasSuits['♠'],
+        '♥': playerHasSuits['♥'],
+        '♦': playerHasSuits['♦'],
+        '♣': playerHasSuits['♣']
+      }
+    });
+    this.winners = game.winners;
+    this.score = game.score;
+    this.error = game.error;
+  };
+
+  getFullState() {
+    return _.pick(this, [
+      'numberOfPlayers', 'deck', 'hands', 'trumpCard', 'trump',
+      'startingPlayer', 'nextPlayer', 'lastTrick', 'trick', 'wonCards', 'round',
+      'suitToFollow', 'hasSuits', 'error', 'winners', 'score'
+    ]);
   }
 
   getPlayerCount() { return this.numberOfPlayers; }
@@ -128,24 +175,13 @@ class Bisca extends Game {
     return teamsPerNumberOfPlayers[this.numberOfPlayers];
   }
 
-  static _toPlayer(player) {
-    return player + 1;
-  }
+  getPossibleMoves() {
 
-  static _toPlayerIndex(player) {
-    return player - 1;
-  }
-
-  getPossibleMoves(playerPerspective) {
-    if (playerPerspective && playerPerspective !== this.nextPlayer) {
-      return this.getAllPossibilities(playerPerspective);
-    }
-
-    let playerIndex = Bisca._toPlayerIndex(this.nextPlayer);
+    let playerIndex = toPlayerIndex(this.nextPlayer);
     let hand = this.hands[playerIndex];
 
-    if (hand.indexOf(null) > -1) {
-      return this.getAllPossibilities(this.nextPlayer).concat(hand.filter(card => card !== null));
+    if (hand.indexOf(hiddenCard) > -1) {
+      return this.getAllPossibilities(this.nextPlayer).concat(hand.filter(isCardVisible));
     }
 
     let playableCards = null;
@@ -158,7 +194,7 @@ class Bisca extends Game {
       playableCards = hand;
     }
 
-    if (hand.indexOf(null) > -1) {
+    if (hand.indexOf(hiddenCard) > -1) {
       return this.getAllPossibilities(this.nextPlayer).concat(playableCards);
     }
 
@@ -167,7 +203,7 @@ class Bisca extends Game {
 
   isValidMove(player, card) {
     return player === this.nextPlayer
-      && this.getPossibleMoves(player).indexOf(card) > -1;
+      && this.getPossibleMoves().indexOf(card) > -1;
   }
 
   _putCardInTrick(playerIndex, card) {
@@ -207,7 +243,7 @@ class Bisca extends Game {
       this.previousPlayer = this.nextPlayer;
       this.lastTrick = this.trick;
       this.trick = _.range(this.numberOfPlayers).map(() => null);
-      this.nextPlayer = Bisca._toPlayer(roundWinnerIndex);
+      this.nextPlayer = toPlayer(roundWinnerIndex);
       this.round += 1;
       this.suitToFollow = null;
 
@@ -216,7 +252,7 @@ class Bisca extends Game {
       }
 
       if (this.deck.length === 0 && _.every(this.hands, hand => hand.length === 0)) {
-        this.winners = this.getWinners();
+        this.winners = this._getWinners();
       }
 
       this.score = this._getTeamScores();
@@ -243,17 +279,15 @@ class Bisca extends Game {
     return (player + 1) % this.numberOfPlayers;
   }
 
-  getFullState() {
-    return _.pick(this, [
-      'numberOfPlayers', 'nextPlayer', 'deck', 'hands', 'trumpCard',
-      'startingPlayer', 'trump', 'trick', 'lastTrick', 'wonCards', 'round',
-      'suitToFollow', 'hasSuits', 'error', 'winners', 'score'
-    ]);
+  onMoveTimeout() {
+    this.winners = Bisca.getTeam(this.getPlayerAfter(this.nextPlayer));
+    this.nextPlayer = null;
+    return true;
   }
 
   getStateView(fullState, player) {
     let self = this;
-    let playerIndex = Bisca._toPlayerIndex(player);
+    let playerIndex = toPlayerIndex(player);
     let hideIfNotTrumpCard = card => card !== self.trumpCard ? null : card;
     let hideHandIfNotPlayer = function(hand, index) {
       return playerIndex === index ? hand : hand.map(hideIfNotTrumpCard);
@@ -262,42 +296,20 @@ class Bisca extends Game {
     return _.assign({}, fullState, {
       deck: fullState.deck.map(hideIfNotTrumpCard),
       hands: fullState.hands.map(hideHandIfNotPlayer),
-      hand: fullState.hands[Bisca._toPlayerIndex(player)]
+      hand: fullState.hands[toPlayerIndex(player)]
     });
   }
-
-  _clone(game) {
-    this.numberOfPlayers = game.numberOfPlayers;
-    this.nextPlayer = game.nextPlayer;
-    this.deck = game.deck.slice();
-    this.hands = copyHands(game.hands);
-    this.trick =  game.trick.slice();
-    this.trumpCard = game.trumpCard;
-    this.trump = game.trump;
-    this.wonCards = copyHands(game.wonCards);
-    this.round = game.round;
-    this.suitToFollow = game.suitToFollow;
-    this.startingPlayer = game.startingPlayer;
-    this.hasSuits = game.hasSuits.map(function(playerHasSuits) {
-      return {
-        '♠': playerHasSuits['♠'],
-        '♥': playerHasSuits['♥'],
-        '♦': playerHasSuits['♦'],
-        '♣': playerHasSuits['♣']
-      }
-    })
-  };
 
   getHighestCard(table, suitToFollow) {
     let trumps = table.filter(card => getSuit(card) === this.trump);
 
     if (trumps.length > 0) {
-      return max(trumps, getScaledValue);
+      return _.maxBy(trumps, getScaledValue);
     }
 
     let followed = table.filter(card => getSuit(card) === suitToFollow);
 
-    return max(followed, getScaledValue);
+    return _.maxBy(followed, getScaledValue);
   }
 
   _isMandatoryToFollowSuit() {
@@ -305,8 +317,9 @@ class Bisca extends Game {
   }
 
   _updatePlayerHasSuits(playerIndex, playedCard) {
+    let playedSuit = getSuit(playedCard);
     if (this.suitToFollow
-      && this.suitToFollow !== getSuit(playedCard)
+      && this.suitToFollow !== playedSuit
       && this._isMandatoryToFollowSuit()) {
 
       this.hasSuits[playerIndex][this.suitToFollow] = false;
@@ -317,7 +330,7 @@ class Bisca extends Game {
     let teamWonCards = players.reduce(
       (cards, player) => cards.concat(this.wonCards[player]), []);
 
-    return sum(teamWonCards, card => getValue(card));
+    return _.sumBy(teamWonCards, card => getValue(card));
   }
 
   _getTeamScores() {
@@ -325,10 +338,14 @@ class Bisca extends Game {
   }
 
   getWinners() {
+    return this.winners;
+  }
+
+  _getWinners() {
     let teams = this._getTeams();
     let teamScores = this._getTeamScores();
 
-    let maxScore = max(teamScores);
+    let maxScore = _.maxBy(teamScores);
 
     let winningTeam = teams.filter((team, teamIndex) => teamScores[teamIndex] === maxScore);
 
@@ -336,37 +353,22 @@ class Bisca extends Game {
       return null;
     }
 
-    return winningTeam[0].map(Bisca._toPlayer);
+    return winningTeam[0].map(toPlayer);
   }
 
-  getAllPossibilities(playerPerspective) {
-    let playerPerspectiveIndex = Bisca._toPlayerIndex(playerPerspective);
-    let playerPerspectiveHand = this.hands[playerPerspectiveIndex];
-
+  getAllPossibilities() {
+    let visibleCards = _.flatten(this.hands).filter(isCardVisible);
     let playedCards = _.flatten(this.wonCards);
-    let inRoundCards = this.trick.filter(card => card !== null);
-    let visibleDeckCards = this.deck.filter(card => card !== null);
-    let impossibilities = playerPerspectiveHand.concat(playedCards)
+    let inRoundCards = this.trick.filter(isCardVisible);
+    let visibleDeckCards = this.deck.filter(isCardVisible);
+    let impossibilities = visibleCards.concat(playedCards)
       .concat(inRoundCards).concat(visibleDeckCards);
 
-    let nextPlayerIndex = Bisca._toPlayerIndex(this.nextPlayer);
+    let nextPlayerIndex = toPlayerIndex(this.nextPlayer);
     let hasSuits = this.hasSuits[nextPlayerIndex];
     return startingDeck.filter(card => {
       let suit = getSuit(card);
       return hasSuits[suit] && !_.includes(impossibilities, card);
-    });
-  }
-
-  _isInvalidAssignment(hands) {
-    if (!hands) { return true; }
-    let self = this;
-
-    return _.some(hands, function isInvalid (hand, playerIndex) {
-
-      return _.some(hand, function hasInvalidSuit (card) {
-        return self.hasSuits[playerIndex][getSuit(card)] === false;
-      });
-
     });
   }
 
@@ -377,37 +379,14 @@ class Bisca extends Game {
       .concat(this.deck.filter(isCardVisible));
   }
 
-  _getUnknownCards() {
+  getUnknownCards() {
     return _.difference(startingDeck, this._getSeenCards());
   }
 
-  randomize(rng, player) {
-    // if (!_.isUndefined(player)) {
-    //   // clear other player hands when game is already visible
-    //   var hand = this.hands[player];
-    //   this.hands = [[],[],[],[]];
-    //   this.hands[player] = hand;
-    // }
+  randomize(rng) {
+    super.randomize(rng);
 
-    let unknownCards = this._getUnknownCards();
-
-    var possibleHands, shuffledUnknownCards;
-
-    do {
-
-      shuffledUnknownCards = shuffle(unknownCards.slice(), rng);
-
-      possibleHands = copyHands(this.hands);
-
-      possibleHands = possibleHands.map(function distributeUnknownCards(hand, playerIndex) {
-        let visibleCards = hand.filter(isCardVisible);
-        var numberOfCardsToTake = hand.filter(isCardHidden).length;
-        return visibleCards.concat(shuffledUnknownCards.splice(0, numberOfCardsToTake));
-      }, this);
-
-    } while (this._isInvalidAssignment(possibleHands));
-
-    this.hands = possibleHands;
+    let shuffledUnknownCards = shuffle(this.getUnknownCards());
 
     this.deck = this.deck.map(card => {
       if (isCardVisible(card)) {
@@ -427,12 +406,12 @@ class Bisca extends Game {
     throw new Error(this.constructor.name + ".getAllPossibleStates not implemented");
   }
 
-  getGameValue() {
-    throw new Error(this.constructor.name + ".getGameValue not implemented");
+  getTeam(player) {
+    throw new Error(this.constructor.name + ".getTeam not implemented");
   }
 
-  getPrettyPlayerHand(player) {
-    throw new Error(this.constructor.name + ".getPrettyPlayerHand not implemented");
+  getGameValue() {
+    throw new Error(this.constructor.name + ".getGameValue not implemented");
   }
 }
 

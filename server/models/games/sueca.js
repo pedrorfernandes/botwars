@@ -5,15 +5,9 @@ let Game = require('./game').default;
 let _ = require('lodash');
 let randomGenerator = require('seedrandom');
 let shuffle = require('../utils/shuffle').shuffle;
-let sample = require('../utils/shuffle').sample;
 
-// for compatibility lodash 3 <-> 4
-let max = _.maxBy || _.max;
-let min = _.minBy || _.min;
-let sum = _.sumBy || _.sum;
-
-function toPlayer(player) {
-  return player + 1;
+function toPlayer(playerIndex) {
+  return playerIndex + 1;
 }
 
 function toPlayerIndex(player) {
@@ -141,6 +135,7 @@ class Sueca extends Game {
     this.winners = game.winners;
     this.score = game.score;
     this.lastTrick = null;
+    this.error = game.error;
   };
 
   getFullState() {
@@ -227,12 +222,12 @@ class Sueca extends Game {
     let trumps = table.filter(card => getSuit(card) === this.trumpSuit);
 
     if (trumps.length > 0) {
-      return max(trumps, getScaledValue);
+      return _.maxBy(trumps, getScaledValue);
     }
 
     let followed = table.filter(card => getSuit(card) === suitToFollow);
 
-    return max(followed, getScaledValue);
+    return _.maxBy(followed, getScaledValue);
   }
 
   _putCardInTrick(playerIndex, card) {
@@ -296,7 +291,7 @@ class Sueca extends Game {
       return cards.concat(this.wonCards[playerIndex])
     }, []);
 
-    return sum(teamWonCards, card => getValue(card));
+    return _.sumBy(teamWonCards, card => getValue(card));
   }
 
   _getTeams() {
@@ -345,58 +340,18 @@ class Sueca extends Game {
     });
   }
 
-  _isInvalidAssignment(hands) {
-    if (!hands) {
-      return true;
-    }
-
-    let self = this;
-
-    return _.some(hands, function isInvalid (hand, playerIndex) {
-
-      return _.some(hand, function hasInvalidSuit (card) {
-        return self.hasSuits[playerIndex][getSuit(card)] === false;
-      });
-
-    });
-  }
-
   _getSeenCards() {
     return _.flatten(this.wonCards)
       .concat(_.flatten(this.hands).filter(isCardVisible))
       .concat(this.trick.filter(isCardVisible));
   }
 
-  _getUnknownCards() {
+  getUnknownCards() {
     return _.difference(startingDeck, this._getSeenCards());
   }
 
-  randomize(rng, player) {
-    let unknownCards = this._getUnknownCards();
-
-    var possibleHands, shuffledUnknownCards;
-
-    do {
-
-      shuffledUnknownCards = shuffle(unknownCards.slice(), rng);
-
-      possibleHands = copyHands(this.hands);
-
-      possibleHands = possibleHands.map(function distributeUnknownCards(hand, playerIndex) {
-        let visibleCards = hand.filter(isCardVisible);
-        let numberOfCardsToTake = hand.filter(isCardHidden).length;
-        return visibleCards.concat(shuffledUnknownCards.splice(0, numberOfCardsToTake));
-      }, this);
-
-    } while (this._isInvalidAssignment(possibleHands));
-
-    this.hands = possibleHands;
-
-    return this;
-  }
-
   getAllPossibleHands() {
-    let unknownCards = this._getUnknownCards();
+    let unknownCards = this.getUnknownCards();
 
     let self = this;
     function buildCombinations(playerIndex, possibleCards, accumulator) {
@@ -407,9 +362,9 @@ class Sueca extends Game {
 
       let playerHand = self.hands[playerIndex];
 
-      let numberOfCardsToTake = hand.filter(isCardHidden).length;
+      let numberOfCardsToTake = playerHand.filter(isCardHidden).length;
 
-      if (numberCardsToTake === 0) {
+      if (numberOfCardsToTake === 0) {
         return buildCombinations(playerIndex + 1, possibleCards, accumulator.concat([playerHand]));
       }
 
@@ -464,7 +419,7 @@ class Sueca extends Game {
 
     let winningBonus = 0;
     let winner = this._getWinners();
-    if (winner && _.contains(winner, this.nextPlayer)) {
+    if (winner && _.includes(winner, this.nextPlayer)) {
       winningBonus = 1000;
     }
     else if (winner) {
@@ -472,23 +427,6 @@ class Sueca extends Game {
     }
 
     return winningBonus + pointsDifferenceForNextPlayer + pointsInHand;
-  }
-
-  getPrettyPlayerHand(player) {
-    let suitOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
-
-    let playerIndex = toPlayerIndex(player);
-
-    let hand = this.hands[playerIndex].slice().sort(function(cardA, cardB) {
-      let valueA = suitOrder[getSuit(cardA)] * 100 + getScaledValue(cardA);
-      let valueB = suitOrder[getSuit(cardB)] * 100 + getScaledValue(cardB);
-      return valueB - valueA;
-    });
-    let grouped = _.groupBy(hand, function(card) { return getSuit(card); });
-    let string = _.reduce(grouped, function(string, suit) {
-      return string + ' | ' + suit.join(' ')
-    }, '');
-    return 'His hand is ' + string;
   }
 }
 

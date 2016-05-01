@@ -64,7 +64,8 @@ function cardOrder(card) {
   let suit = getSuit(card);
 
   let suitOrder = ["♠", "♥", "♣", "♦"].indexOf(suit) + 1;
-  let valueOrder = ["2", "3", "4", "5", "6", "9", "8", "1", "Q", "J", "K", "7", "A"].indexOf(value) + 1;
+  let valueOrder = ["2", "3", "4", "5", "6", "9", "8", "1", "Q", "J", "K", "7", "A"]
+      .indexOf(value) + 1;
 
   return suitOrder * 100 + valueOrder;
 }
