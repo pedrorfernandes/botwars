@@ -71,7 +71,7 @@ function flatten (a, b) {
 }
 
 function isGame(object) {
-  return object.hands && object.trick;
+  return object && object.hands && object.trick;
 }
 
 let numberOfPlayers = 4;
@@ -87,11 +87,11 @@ class Sueca extends Game {
       return;
     }
 
-    let seed = options.seed;
+    let seed = _.get(options, 'seed');
     let rng = seed ? randomGenerator(seed) : randomGenerator();
     let lastGameTrumpPlayer = _.get(options, 'lastGame.trumpPlayer');
     if (lastGameTrumpPlayer) {
-      this.trumpPlayer = Sueca.getPlayerAfter(lastGameTrumpPlayer);
+      this.trumpPlayer = this.getPlayerAfter(lastGameTrumpPlayer);
     } else {
       this.trumpPlayer = Math.floor(rng() * numberOfPlayers + 1);
     }
@@ -170,6 +170,10 @@ class Sueca extends Game {
 
   isError() {
     return this.error;
+  }
+
+  isTie() {
+    return _.isEqual(this.winners, [1,2,3,4]);
   }
 
   getNextPlayer() {
@@ -281,10 +285,6 @@ class Sueca extends Game {
     return (player % numberOfPlayers) + 1;
   }
 
-  getNextPlayer() {
-    return this.nextPlayer;
-  }
-
   getScore(players) {
     let teamWonCards = players.reduce((cards, player) => {
       let playerIndex = toPlayerIndex(player);
@@ -320,7 +320,7 @@ class Sueca extends Game {
     }
 
     // tie
-    return null;
+    return [1,2,3,4];
   }
 
   getAllPossibilities() {

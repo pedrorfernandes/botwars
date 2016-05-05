@@ -28,6 +28,8 @@ function getWorkingDatabase(bucket) {
 
   function saveGame(object) {
     object.type = "game";
+    object.date = (new Date()).toString();
+    object.timestamp = Date.now();
     return bucketUpsert(object.id, object);
   }
 
@@ -41,6 +43,8 @@ function getWorkingDatabase(bucket) {
 
   function saveCompetition(object) {
     object.type = "competition";
+    object.date = (new Date()).toString();
+    object.timestamp = Date.now();
     return bucketUpsert(object.id, object);
   }
 
