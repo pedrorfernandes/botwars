@@ -78,7 +78,7 @@ function copyHands(hand) {
 let numberOfPlayers = 4;
 
 function isGame(object) {
-  return object.hands && object.trick;
+  return object && object.hands && object.trick;
 }
 
 let storeScores = true;
@@ -168,6 +168,10 @@ class Hearts extends Game {
 
   isError() {
     return this.error;
+  }
+
+  isTie() {
+    return this.winners && this.winners.length >= 2;
   }
 
   getNextPlayer() {
@@ -341,7 +345,7 @@ class Hearts extends Game {
     let players = this._getPlayers();
     let playerScores = this._getScores();
 
-    let minScore = _.minBy(playerScores);
+    let minScore = _.min(playerScores);
 
     return players.filter((player, playerIndex) => playerScores[playerIndex] === minScore);
   }

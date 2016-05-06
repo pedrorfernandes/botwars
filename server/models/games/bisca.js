@@ -80,8 +80,10 @@ function getNumberOfCardsPerPlayer(numberOfPlayers) {
 }
 
 function isGame(object) {
-  return object.hands && object.trick;
+  return object && object.hands && object.trick;
 }
+
+let storeScores = true;
 
 class Bisca extends Game {
   constructor(options) {
@@ -110,7 +112,7 @@ class Bisca extends Game {
       this.startingPlayer = Math.floor(rng() * this.numberOfPlayers + 1);
     }
 
-    this.nextPlayer = this.getPlayerAfter(this.trumpPlayer);
+    this.nextPlayer = this.startingPlayer;
     this.lastTrick = null;
     this.trick = _.range(this.numberOfPlayers).map(() => null);
     this.wonCards = _.range(this.numberOfPlayers).map(() => []);
@@ -118,7 +120,9 @@ class Bisca extends Game {
     this.suitToFollow = null;
     this.hasSuits = _.range(this.numberOfPlayers).map(() => ({ '♠': true, '♥': true, '♦': true, '♣': true }));
 
-    this.score = _.range(this.numberOfPlayers).map(() => 0);
+    if (storeScores) {
+      this.score = _.range(this.numberOfPlayers).map(() => 0);
+    }
     this.error = false;
     this.winners = null;
   }
@@ -164,6 +168,11 @@ class Bisca extends Game {
   }
 
   isError() { return this.error; }
+
+  isTie() {
+    // TODO consider bisca of 4
+    return this.winners && this.winners.length >= 2;
+  }
 
   getNextPlayer() { return this.nextPlayer; }
 
@@ -255,7 +264,9 @@ class Bisca extends Game {
         this.winners = this._getWinners();
       }
 
-      this.score = this._getTeamScores();
+      if (storeScores) {
+        this.score = this._getTeamScores();
+      }
 
       return;
     }
@@ -345,15 +356,11 @@ class Bisca extends Game {
     let teams = this._getTeams();
     let teamScores = this._getTeamScores();
 
-    let maxScore = _.maxBy(teamScores);
+    let maxScore = _.max(teamScores);
 
     let winningTeam = teams.filter((team, teamIndex) => teamScores[teamIndex] === maxScore);
 
-    if (winningTeam.length > 1) {
-      return null;
-    }
-
-    return winningTeam[0].map(toPlayer);
+    return _.flatten(winningTeam).map(toPlayer);
   }
 
   getAllPossibilities() {
