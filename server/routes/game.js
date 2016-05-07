@@ -14,9 +14,9 @@ export default function (Game, compTypes) {
   let gameRegistry = new GameRegistry(Game);
   let compRegistry = new CompetitionRegistry(gameRegistry, compTypes);
 
-  gameRegistry.restoreAllStoredGames(Game).then(
-      () => compRegistry.restoreAllStoredCompetitions(Game, gameRegistry)
-  );
+  gameRegistry.restoreAllStoredGames(Game)
+    .then(() => compRegistry.restoreAllStoredCompetitions(Game, gameRegistry))
+    .then(() => console.log('Restored games and competitions of ' + Game.name));
 
   if (populateConfig) {
     populateConfig.competitions.forEach(function (competitionParams) {

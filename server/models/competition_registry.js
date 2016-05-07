@@ -19,6 +19,7 @@ class CompetitionRegistry extends Registry {
         .then(competitions =>
             competitions.forEach(competition => {
               competition.gameRegistry = gameRegistry;
+              competition.games = competition.gameIds.map(id => gameRegistry.instances[id]);
               compRegistry.restore(competition, CompetitionInstance);
             })
         );

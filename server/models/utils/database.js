@@ -1,6 +1,7 @@
 import fs from "fs";
 import { Cluster, N1qlQuery } from "couchbase"
 import Promise from "bluebird";
+import _ from "lodash";
 
 const dbConfig = JSON.parse(fs.readFileSync("config.json")).couchbase;
 
@@ -42,19 +43,20 @@ function getWorkingDatabase(bucket) {
   }
 
   function saveCompetition(object) {
-    object.type = "competition";
-    object.date = (new Date()).toString();
-    object.timestamp = Date.now();
-    return bucketUpsert(object.id, object);
+    let competition = _.omit(object, ['gameRegistry', 'games']);
+    competition.gameIds = _.map(object.games, game => game.id);
+    competition.type = "competition";
+    competition.date = (new Date()).toString();
+    competition.timestamp = Date.now();
+    return bucketUpsert(competition.id, competition);
   }
 
   function getAllCompetitions(gameClassName) {
     let query = N1qlQuery.fromString(`
-      select default.*
+      select comp, currentGame, date, id, playerReg, status, timestamp, type, gameIds
       from default
       where type = "competition"
-      and ANY gameInstance IN OBJECT_VALUES(gameRegistry.instances)
-      SATISFIES gameInstance.game.gameClass = "${gameClassName}" END
+      and currentGame.game.gameClass = "${gameClassName}"
     `);
     return bucketQuery(query);
   }
