@@ -36,12 +36,12 @@ class GameInstance extends EventEmitter {
       });
     }
 
-    this.on("move", function (player, move) {
+    this.on("move", function (player, move, computationTime) {
       if (this.history.next !== null) {
         this.history.events.push({ eventType: "state", fullState: this.history.next });
         this.history.next = null;
       }
-      this.history.events.push({ eventType: "move", player, move });
+      this.history.events.push({ eventType: "move", player, move, computationTime });
     });
   }
 
@@ -91,7 +91,7 @@ class GameInstance extends EventEmitter {
     return this.hasStarted() ? this.game.isEnded() : null;
   }
 
-  move(player, move) {
+  move(player, move, computationTime) {
     if (!this.hasStarted()) return null;
 
     if (this.game.isEnded() || !this.game.isValidMove(player, move))
@@ -99,7 +99,7 @@ class GameInstance extends EventEmitter {
 
     let moveTime = this.moveTimer.stop();
     this.game.move(player, move, moveTime);
-    this.emit("move", player, move);
+    this.emit("move", player, move, computationTime);
 
     this._onStateChange();
     return true;
