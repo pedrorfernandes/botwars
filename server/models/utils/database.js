@@ -56,7 +56,7 @@ function getWorkingDatabase(bucket) {
       select comp, currentGame, date, id, playerReg, status, timestamp, type, gameIds
       from default
       where type = "competition"
-      and currentGame.game.gameClass = "${gameClassName}"
+      and comp.params.gameName = "${gameClassName}"
     `);
     return bucketQuery(query);
   }
