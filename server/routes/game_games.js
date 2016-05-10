@@ -105,8 +105,7 @@ export default function (gameRegistry) {
       });
 
       ws.on("message", function (msg) {
-        let parsed = JSON.parse(msg);
-        game.move(player, parsed.move, parsed.computationTime);
+        game.move(player, JSON.parse(msg));
       });
 
       if (game.hasStarted() && player === game.getNextPlayer()) {
