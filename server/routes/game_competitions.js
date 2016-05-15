@@ -40,7 +40,11 @@ export default function (gameRegistry, compRegistry) {
   });
 
   router.get("/:compId/games", function (req, res) {
-    res.json(req.comp.getGames().map(g => g.getInfo()));
+    let competition = req.comp.comp;
+    res.json({
+      games: req.comp.getGames().map(g => g.getInfo()),
+      gamesToPlayCount: competition.gameCount - competition.playedGameCount
+    });
   });
 
   return router;
