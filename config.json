@@ -46,6 +46,7 @@
 
   "couchbase": {
     "enabled": true,
+    "writeOnly": true,
     "cluster": "http://localhost:8091/",
     "bucket": "default"
   }

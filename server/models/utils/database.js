@@ -22,6 +22,13 @@ function getNoopDatabase() {
   }
 }
 
+function getWriteOnlyDatabase(bucket) {
+  let dbAPI = getWorkingDatabase(bucket);
+  dbAPI.games.getAll = getNoopFunction(Promise.resolve([]));
+  dbAPI.competitions.getAll =  getNoopFunction(Promise.resolve([]));
+  return dbAPI;
+}
+
 function getWorkingDatabase(bucket) {
 
   let bucketQuery = Promise.promisify(bucket.query, { context: bucket });
@@ -92,7 +99,11 @@ let databaseInstancePromise = new Promise(function (resolve /*, reject*/) {
       return;
     }
 
-    resolve(getWorkingDatabase(bucket));
+    if (dbConfig.writeOnly === true) {
+      resolve(getWriteOnlyDatabase(bucket));
+    } else {
+      resolve(getWorkingDatabase(bucket));
+    }
   });
 });
 
