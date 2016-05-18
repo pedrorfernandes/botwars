@@ -142,7 +142,7 @@ gulp.task("client:watch", function () {
 
 gulp.task('server:run', ["client:build"], function () {
   var monitor = nodemon({
-    nodeArgs: ["-r", "babel-register"],
+    nodeArgs: ["--max-old-space-size=16384", "-r", "babel-register"],
     script: 'server/main.js',
     ext: 'js',
     ignore: ['*'],
