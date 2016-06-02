@@ -24,6 +24,12 @@ export default function (Game, compTypes) {
         compRegistry.create(competitionParams);
       }
     });
+
+    populateConfig.games.forEach(function (gameParams) {
+      if (gameParams.gameName === Game.name) {
+        gameRegistry.create(gameParams);
+      }
+    });
   }
 
   let router = new express.Router();

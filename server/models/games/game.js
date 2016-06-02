@@ -65,9 +65,16 @@ class Game {
     throw new Error(this.constructor.name + ".getStateView not implemented");
   }
 
+  isCheatingPlayer(player) {
+    if (Array.isArray(this.params.cheatingPlayers)) {
+      return this.params.cheatingPlayers.indexOf(player) > -1;
+    }
+    return false;
+  }
+
   // getState(player)
   getState(player) {
-    if (_.isUndefined(player)) {
+    if (_.isUndefined(player) || this.isCheatingPlayer(player)) {
       return this.getFullState();
     }
     return this.getStateView(this.getFullState(), player);
